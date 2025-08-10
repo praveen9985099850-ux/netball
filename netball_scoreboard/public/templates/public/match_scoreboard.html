@@ -1,9 +1,0 @@
-{% extends 'base.html' %}
-
-{% block title %}{{ match.team1.name }} vs {{ match.team2.name }}{% endblock %}
-
-{% block content %}
-    <div id="scoreboard-container" hx-get="{% url 'public:match_scoreboard' match.id %}" hx-trigger="load, every 5s, scoreUpdated from:body" hx-swap="innerHTML">
-        {% include 'public/_scoreboard_content.html' %}
-    </div>
-{% endblock %}
