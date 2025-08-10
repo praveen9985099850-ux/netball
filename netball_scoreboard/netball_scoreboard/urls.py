@@ -19,6 +19,8 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("", include("scoreboard.urls")),
+    path('admin/', admin.site.urls),
+    path('scorer/', include('scorer.urls', namespace='scorer')),
+    path('accounts/', include('accounts.urls', namespace='accounts')),
+    path('', include('public.urls', namespace='public')),
 ]

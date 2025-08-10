@@ -1,0 +1,105 @@
+{% load public_extras %}
+<div class="mt-4">
+    <h1 class="text-center">{{ match.team1.name }} vs {{ match.team2.name }}</h1>
+
+    <div id="timer-container" class="text-center my-3">
+        {% if match.status == 'scheduled' %}
+            <h3 id="countdown-timer"></h3>
+        {% elif match.status == 'live' %}
+            <h3>Quarter {{ match.quarter }}</h3>
+            <h4 id="quarter-timer"></h4>
+        {% endif %}
+    </div>
+
+    <h2 class="text-center">
+        {% for score in scores %}
+            {{ score.team.name }}: {{ score.score }}
+            {% if not forloop.last %} - {% endif %}
+        {% empty %}
+            {{ match.team1.name }}: 0 - {{ match.team2.name }}: 0
+        {% endfor %}
+    </h2>
+
+    <hr>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h3>{{ match.team1.name }} Fouls</h3>
+            <ul class="list-group">
+                {% for player in match.team1.players.all %}
+                    <li class="list-group-item">{{ player.name }}: {{ fouls|get_item:player.id|default:0 }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h3>{{ match.team2.name }} Fouls</h3>
+            <ul class="list-group">
+                {% for player in match.team2.players.all %}
+                    <li class="list-group-item">{{ player.name }}: {{ fouls|get_item:player.id|default:0 }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('htmx:afterSwap', function() {
+    // Countdown for scheduled matches
+    if ("{{ match.status }}" === "scheduled") {
+        const startTime = new Date("{{ match.start_time.isoformat }}").getTime();
+        const countdownElement = document.getElementById('countdown-timer');
+
+        if (countdownElement) {
+            const interval = setInterval(function() {
+                const now = new Date().getTime();
+                const distance = startTime - now;
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                countdownElement.innerHTML = `Starts in: ${days}d ${hours}h ${minutes}m ${seconds}s`;
+
+                if (distance < 0) {
+                    clearInterval(interval);
+                    countdownElement.innerHTML = "Match is about to start!";
+                }
+            }, 1000);
+        }
+    }
+
+    // Timer for live matches
+    if ("{{ match.status }}" === "live") {
+        const timerElement = document.getElementById('quarter-timer');
+        if (timerElement) {
+            if ("{{ match.timer_status }}" === "running") {
+                const endTime = new Date("{{ match.quarter_end_time.isoformat }}").getTime();
+                const interval = setInterval(function() {
+                    const now = new Date().getTime();
+                    const distance = endTime - now;
+
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                    timerElement.innerHTML = `Time remaining: ${minutes}m ${seconds}s`;
+
+                    if (distance < 0) {
+                        clearInterval(interval);
+                        timerElement.innerHTML = "Quarter finished!";
+                    }
+                }, 1000);
+            } else if ("{{ match.timer_status }}" === "paused") {
+                const remainingSeconds = {{ match.remaining_time_on_pause.total_seconds }};
+                const minutes = Math.floor(remainingSeconds / 60);
+                const seconds = Math.floor(remainingSeconds % 60);
+                timerElement.innerHTML = `Time remaining: ${minutes}m ${seconds}s (Paused)`;
+            } else if ("{{ match.timer_status }}" === "stopped") {
+                timerElement.innerHTML = `Time remaining: {{ match.quarter_duration }}:00 (Stopped)`;
+            }
+        }
+    }
+});
+// Trigger the event manually on first load
+document.dispatchEvent(new Event('htmx:afterSwap'));
+</script>
